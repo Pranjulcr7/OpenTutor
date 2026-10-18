@@ -7,24 +7,30 @@ import {
   findPathToNode,
 } from "./content-tree";
 
+const defaults = { type: "section", level: 0, order_index: 0, source_type: "manual" };
+
 const tree = [
   {
+    ...defaults,
     id: "chapter-1",
     title: "Chapter 1",
     content: "",
     children: [
       {
+        ...defaults,
         id: "node-a",
         title: "Binary Search",
         content: "How binary search works",
         children: [],
       },
       {
+        ...defaults,
         id: "node-b",
         title: "Two Pointers",
         content: "",
         children: [
           {
+            ...defaults,
             id: "node-c",
             title: "Sliding Window",
             content: "Window technique notes",

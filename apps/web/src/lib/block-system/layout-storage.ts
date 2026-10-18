@@ -34,6 +34,7 @@ const LEARNING_MODES: readonly LearningMode[] = [
 
 const BLOCK_DEFAULT_SIZES: Record<BlockType, BlockSize> = {
   chapter_list: "full",
+  summary: "large",
   notes: "large",
   quiz: "medium",
   flashcards: "medium",
