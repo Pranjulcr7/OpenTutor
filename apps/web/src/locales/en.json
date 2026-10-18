@@ -832,12 +832,9 @@
   "guidedSession.start": "Start Guided Session",
   "guidedSession.resume": "Resume Session",
   "guidedSession.description": "AI-guided learning with warmup, teaching, practice, and review",
-
   "common.back": "Back",
-
   "setup.modeTitle": "How are you learning?",
   "setup.modeDescription": "This determines your page layout, navigation, and how the AI tutor assists you.",
-
   "flashcard.questionLabel": "Question",
   "flashcard.answerLabel": "Answer",
   "flashcard.tapToReveal": "Tap card or press Space to reveal answer",
@@ -845,7 +842,6 @@
   "flashcard.keyboardHint": "← Again | → Good | 1-4 Rate",
   "flashcard.ariaQuestion": "Flashcard showing question. Press Enter or Space to reveal answer.",
   "flashcard.ariaAnswer": "Flashcard showing answer. Press Enter or Space to show question.",
-
   "upload.uploadSuccess": "Uploaded {name}: {count} sections created",
   "upload.uploadFailed": "Upload failed: {message}",
   "upload.scrapeSuccess": "Scraped URL: {count} sections created",
@@ -858,11 +854,9 @@
   "upload.dropHere": "Drop file here",
   "upload.scrapeAndImport": "Scrape & Import",
   "upload.scraping": "Scraping...",
-
   "url.invalidUrl": "Please enter a valid URL starting with http:// or https://",
   "url.addSuccess": "URL content added successfully",
   "url.scrapeFailed": "Failed to scrape URL: {message}",
-
   "error.title.app": "Something went wrong",
   "error.title.course": "Failed to load course",
   "error.title.graph": "Failed to load knowledge graph",
@@ -882,7 +876,6 @@
   "error.hint.rateLimit": "Too many requests. Please wait a moment.",
   "error.hint.generic": "An unexpected error occurred. Please try again.",
   "error.retry": "Try again",
-
   "chat.mockWarning": "No LLM API key configured. Responses are local fallback text, not AI-generated.",
   "chat.persistenceWarning": "Your conversation was not saved. You may need to resend your message.",
   "chat.status.routing": "Choosing the best help mode",
@@ -896,13 +889,11 @@
   "chat.error.timeout": "Request timed out. The LLM may be overloaded.",
   "chat.error.llmUnavailable": "LLM provider is unavailable. Check your connection or configuration.",
   "chat.error.generic": "Something went wrong. Please try again.",
-
   "quiz.progressWarning": "Your answer was recorded, but progress tracking may be incomplete.",
   "quiz.ariaLabel": "Quiz question",
   "quiz.answerOptions": "Answer options",
   "plan.ariaLabel": "Study plan",
   "plan.loadingLabel": "Loading plan",
-
   "notificationCategory.scrape_alert": "Scrape Alert",
   "notificationCategory.scrape_auth_expired": "Auth Expired",
   "notificationCategory.daily_brief": "Daily Brief",
@@ -929,5 +920,23 @@
   "summary.studyTimeHM": "{h}h {m}m",
   "summary.studyTimeM": "{m}m",
   "summary.empty": "No data yet. Keep studying!",
-  "summary.loadFailed": "Could not load digest."
+  "summary.loadFailed": "Could not load digest.",
+  "experiments.title": "Explore the numbers",
+  "experiments.back": "Study Lab",
+  "experiments.subtitle": "Predict, change a parameter, and explain what happened. These calculations run in your browser without model calls.",
+  "experiments.softmax": "Softmax and temperature",
+  "experiments.predictSoftmax": "Before moving the slider: will increasing temperature make the largest weight more or less dominant?",
+  "experiments.score": "Score",
+  "experiments.temperature": "Temperature",
+  "experiments.weights": "Normalized weights",
+  "experiments.weight": "Weight",
+  "experiments.softmaxNote": "Weights are exp(score / temperature), normalized to sum to one. Try adding the same number to every score.",
+  "experiments.bayes": "Spam detection and base rates",
+  "experiments.predictBayes": "If a detector catches 90% of spam, does a flagged email have a 90% chance of being spam? Predict first.",
+  "experiments.prior": "Fraction of emails that are spam",
+  "experiments.tpr": "True positive rate",
+  "experiments.fpr": "False positive rate",
+  "experiments.posterior": "P(spam | flagged)",
+  "experiments.undefined": "Undefined",
+  "experiments.bayesNote": "Posterior = prior × TPR / [prior × TPR + (1 − prior) × FPR]. A zero denominator means the flag never occurs under these assumptions."
 }
