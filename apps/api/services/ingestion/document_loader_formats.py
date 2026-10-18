@@ -33,6 +33,12 @@ async def _extract_local_with_crawl4ai(file_path: str) -> tuple[str, str]:
     """
     import asyncio
 
+    with open(file_path, "rb") as handle:
+        is_pdf = handle.read(4) == b"%PDF"
+    if is_pdf:
+        from services.ingestion.pdf_evidence import extract_pdf_pages
+        return await asyncio.to_thread(extract_pdf_pages, file_path)
+
     abs_path = str(Path(file_path).resolve())
     file_url = f"file://{abs_path}"
 
