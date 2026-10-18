@@ -156,6 +156,10 @@ def _markdown_to_tree(
     if not markdown or not markdown.strip():
         return []
 
+    from services.ingestion.pdf_evidence import PREFIX, page_nodes
+    if markdown.startswith(PREFIX):
+        return page_nodes(markdown, course_id, source_file)
+
     lines = markdown.split("\n")
 
     # Step 1: Quick heading check (early exit, avoids full scan)

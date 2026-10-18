@@ -31,7 +31,7 @@ async def dispatch_content(db: AsyncSession, job: IngestionJob) -> dict:
     )
 
     if category in ("lecture_slides", "textbook", "notes", "syllabus") or (
-        category == "other" and inferred_text_source
+        category == "other" and (inferred_text_source or source_name.endswith(".pdf") or job.extracted_markdown.startswith("<!-- study-pdf-page: "))
     ):
         # Build content tree using PageIndex pattern
         from services.parser.pdf import _markdown_to_tree
@@ -130,6 +130,7 @@ async def dispatch_content(db: AsyncSession, job: IngestionJob) -> dict:
             node.source_type = job.source_type
             node.source_file = source_label
             node.content_category = category
+            node.metadata_ = {**(node.metadata_ or {}), "ingestion_job_id": str(job.id)}
             db.add(node)
         await db.flush()  # Assign IDs before indexing
 
