@@ -956,5 +956,20 @@
   "study.sources": "Evidence sent to the tutor",
   "study.noEvidence": "No source evidence was retrieved. This answer is not document-grounded.",
   "study.page": "page",
-  "study.truncated": "· excerpt shortened"
+  "study.truncated": "· excerpt shortened",
+  "study.enableReview": "Review latest answer",
+  "study.reviewer": "Evidence reviewer",
+  "study.not_checked": "Not checked",
+  "study.reviewed": "Claim review returned",
+  "study.reviewLimit": "A second model can also be wrong. Only selected claims are reviewed; matching a quote does not prove the claim.",
+  "study.supported": "Supported by quoted evidence",
+  "study.contradicted": "Contradicted by quoted evidence",
+  "study.insufficient_evidence": "Insufficient evidence",
+  "study.reason.disabled": "Review is off.",
+  "study.reason.not_configured": "Configure a reviewer model on the server.",
+  "study.reason.no_evidence": "No evidence available for review.",
+  "study.reason.budget_exceeded": "Review input is too large; the answer was not partially checked.",
+  "study.reason.unavailable": "Reviewer unavailable or timed out.",
+  "study.reason.invalid_output": "Reviewer returned invalid output.",
+  "study.reason.claim_not_in_answer": "Reviewer referred to a claim absent from the answer."
 }

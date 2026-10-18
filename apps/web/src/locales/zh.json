@@ -956,5 +956,20 @@
   "study.sources": "发送给导师的证据",
   "study.noEvidence": "未检索到资料证据。此回答并非基于文档。",
   "study.page": "页",
-  "study.truncated": "· 节选已缩短"
+  "study.truncated": "· 节选已缩短",
+  "study.enableReview": "审核最新回答",
+  "study.reviewer": "证据审核",
+  "study.not_checked": "未审核",
+  "study.reviewed": "已返回声明审核",
+  "study.reviewLimit": "第二个模型也可能出错。仅审核选定声明；引用匹配不代表声明正确。",
+  "study.supported": "引用证据支持",
+  "study.contradicted": "与引用证据矛盾",
+  "study.insufficient_evidence": "证据不足",
+  "study.reason.disabled": "审核已关闭。",
+  "study.reason.not_configured": "请在服务器配置审核模型。",
+  "study.reason.no_evidence": "无可用审核证据。",
+  "study.reason.budget_exceeded": "审核输入过大；未执行部分审核。",
+  "study.reason.unavailable": "审核模型不可用或超时。",
+  "study.reason.invalid_output": "审核模型输出无效。",
+  "study.reason.claim_not_in_answer": "审核模型引用了回答中不存在的声明。"
 }

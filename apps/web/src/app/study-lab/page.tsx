@@ -9,6 +9,7 @@ import { t } from "@/lib/i18n";
 type Message = { role: "user" | "assistant"; content: string };
 type Evidence = { citation: string; title: string; source: string; page: number | null; content: string; quality_flags: string[]; truncated: boolean };
 type Result = {
+  review?: { status: string; reason?: string; scope?: string; claims: { claim: string; verdict: string; citation: string; quote: string; reason: string }[] };
   answer: string; evidence: Evidence[]; usage: { input_tokens?: number; output_tokens?: number };
   audit: { estimated_input_tokens: number; evidence_tokens: number; history_messages_omitted: number; documents_omitted: number; unknown_citations: string[] };
 };
@@ -18,6 +19,7 @@ export default function StudyLab() {
   const [course, setCourse] = useState("");
   const [goal, setGoal] = useState("");
   const [mode, setMode] = useState("explain");
+  const [review, setReview] = useState(false);
   const [budget, setBudget] = useState(2000);
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<Message[]>([]);
@@ -35,7 +37,7 @@ export default function StudyLab() {
     try {
       const response = await fetch(`${API_BASE}/study-lab/turn`, buildSecureRequestInit({
         method: "POST", signal: controller.signal,
-        body: JSON.stringify({ question, goal, mode, course_id: course || null, evidence_budget: budget, history: history.slice(-24) }),
+        body: JSON.stringify({ question, goal, mode, review, course_id: course || null, evidence_budget: budget, history: history.slice(-24) }),
       }));
       if (!response.ok) throw await parseApiError(response);
       const data: Result = await response.json();
@@ -56,6 +58,7 @@ export default function StudyLab() {
           <label className="block text-sm">{t("study.mode")}<select className={field} value={mode} disabled={busy} onChange={e => setMode(e.target.value)}>{["explain", "practice", "interview", "review"].map(m => <option key={m} value={m}>{t(`study.${m}`)}</option>)}</select></label>
           <label className="block text-sm">{t("study.goal")}<textarea className={field} value={goal} disabled={busy} maxLength={1000} rows={3} onChange={e => setGoal(e.target.value)} placeholder={t("study.goalHint")} /></label>
           <label className="block text-sm">{t("study.budget")}: {budget}<input className="mt-3 w-full" type="range" min={400} max={4000} step={100} value={budget} disabled={busy} onChange={e => setBudget(Number(e.target.value))} /></label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={review} disabled={busy} onChange={e => setReview(e.target.checked)} />{t("study.enableReview")}</label>
           <p className="text-xs text-muted-foreground">{t("study.memory")}</p>
           <button className="rounded-lg border px-3 py-2 text-sm" disabled={busy} onClick={reset}>{t("study.reset")}</button>
         </aside>
@@ -72,6 +75,7 @@ export default function StudyLab() {
             <dl className="grid grid-cols-2 gap-3 text-sm"><div><dt>{t("study.estimated")}</dt><dd className="text-2xl">{result.audit.estimated_input_tokens}</dd></div><div><dt>{t("study.provider")}</dt><dd className="text-2xl">{result.usage.input_tokens ?? "—"} / {result.usage.output_tokens ?? "—"}</dd></div></dl>
             <p className="text-xs text-muted-foreground">{t("study.estimateNote")} {t("study.omitted")}: {result.audit.history_messages_omitted} / {result.audit.documents_omitted}</p>
             {!!result.audit.unknown_citations.length && <p role="alert">{t("study.badCitations")}: {result.audit.unknown_citations.join(", ")}</p>}
+            {result.review && <div className="space-y-3 border-t pt-4"><h3 className="font-medium">{t("study.reviewer")}: {t(`study.${result.review.status}`)}</h3><p className="text-xs text-muted-foreground">{t("study.reviewLimit")}</p>{result.review.reason && <p>{t(`study.reason.${result.review.reason}`)}</p>}{result.review.claims.map((claim, i) => <div key={i} className="rounded-xl bg-muted p-3 text-sm"><strong>{t(`study.${claim.verdict}`)}</strong><p className="mt-2">{claim.claim}</p><blockquote className="my-2 border-l-2 pl-3">[{claim.citation}] {claim.quote}</blockquote><p>{claim.reason}</p></div>)}</div>}
             <h3 className="font-medium">{t("study.sources")}</h3>
             {!result.evidence.length && <p className="text-sm">{t("study.noEvidence")}</p>}
             {result.evidence.map(source => <details key={source.citation} className="rounded-xl bg-muted p-3 text-sm"><summary className="cursor-pointer">[{source.citation}] {source.title} {source.page && `· ${t("study.page")} ${source.page}`}</summary><p className="mt-2 text-xs">{source.source} · {source.quality_flags.join(", ")} {source.truncated && t("study.truncated")}</p><p className="mt-3 whitespace-pre-wrap">{source.content}</p></details>)}
