@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from config import settings
 from routers import (
     agenda,
+    study_lab,
     auth,
     block_routes,
     canvas,
@@ -32,6 +33,7 @@ from routers import (
 
 
 CORE_ROUTERS = (
+    (study_lab.router, "/api/study-lab", ["study-lab"]),
     (health.router, "/api", ["health"]),
     (upload.router, "/api/content", ["content"]),
     (chat.router, "/api/chat", ["chat"]),
