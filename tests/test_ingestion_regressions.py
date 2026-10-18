@@ -118,8 +118,8 @@ async def test_run_ingestion_pipeline_file_sets_source_fields():
     course_id = uuid.uuid4()
 
     with patch(
-        "services.ingestion.pipeline.extract_content",
-        return_value="# Chapter 1\nSection 1.1 overview with enough descriptive text to exceed fifty characters.",
+        "services.ingestion.pipeline.extract_content_with_title",
+        return_value=("", "# Chapter 1\nSection 1.1 overview with enough descriptive text to exceed fifty characters."),
     ):
         job = await run_ingestion_pipeline(
             db=db,
@@ -148,8 +148,9 @@ async def test_run_ingestion_pipeline_url_sets_source_fields():
     target_url = "https://example.com/lesson"
 
     with patch(
-        "services.ingestion.pipeline.extract_content",
+        "services.ingestion.pipeline.extract_content_with_title",
         return_value=(
+            "",
             "# Chapter 1\n"
             "Section 1.1 overview with enough descriptive text to exceed fifty characters."
         ),
