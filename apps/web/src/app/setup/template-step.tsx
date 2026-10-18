@@ -6,6 +6,7 @@ import type { LearningMode } from "@/lib/block-system/types";
 import type { BlockType } from "@/lib/block-system/types";
 
 const BLOCK_ICONS: Record<BlockType, typeof BookOpen> = {
+  summary: FileText,
   notes: FileText,
   quiz: HelpCircle,
   flashcards: Layers,
