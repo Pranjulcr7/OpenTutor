@@ -16,6 +16,8 @@ from services.llm.router import get_llm_client
 from services.search.strategies import keyword_search
 from services.study.packet import build_packet, unknown_citations
 
+from services.study.reviewer import review_answer, unchecked
+
 router = APIRouter()
 
 
@@ -30,6 +32,7 @@ class StudyTurn(BaseModel):
     mode: Literal["explain", "practice", "interview", "review"] = "explain"
     course_id: uuid.UUID | None = None
     history: list[Message] = Field(default_factory=list, max_length=24)
+    review: bool = False
     evidence_budget: int = Field(default=2000, ge=400, le=4000)
 
 
@@ -64,7 +67,16 @@ async def study_turn(
             504, "Tutor timed out; no automatic retry was made."
         ) from exc
     packet["audit"]["unknown_citations"] = unknown_citations(answer, packet["evidence"])
+    review = unchecked("disabled")
+    if body.review:
+        task_context = next(
+            (m.content for m in reversed(body.history) if m.role == "assistant"), ""
+        )
+        review = await review_answer(
+            body.question, body.goal, task_context, answer, packet["evidence"]
+        )
     return {
+        "review": review,
         "answer": answer,
         "usage": usage,
         "evidence": packet["evidence"],

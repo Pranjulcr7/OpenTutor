@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # LLM — primary provider selection
+    study_reviewer_model: str = ""
+    study_reviewer_base_url: str = "http://localhost:11434/v1"
+    study_reviewer_api_key: str = ""
+
     llm_provider: str = "ollama"  # ollama | openai | anthropic | deepseek | openrouter | gemini | groq | vllm | lmstudio | textgenwebui | custom
     llm_model: str = "llama3.2:3b"
 
