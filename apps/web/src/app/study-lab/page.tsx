@@ -9,7 +9,7 @@ import { t } from "@/lib/i18n";
 type Message = { role: "user" | "assistant"; content: string };
 type Evidence = { citation: string; title: string; source: string; page: number | null; content: string; quality_flags: string[]; truncated: boolean };
 type Result = {
-  review?: { status: string; reason?: string; scope?: string; claims: { claim: string; verdict: string; citation: string; quote: string; reason: string }[] };
+  review?: { model?: string; estimated_input_tokens?: number; usage?: {input_tokens?: number; output_tokens?: number}; status: string; reason?: string; scope?: string; claims: { claim: string; verdict: string; citation: string; quote: string; reason: string }[] };
   answer: string; evidence: Evidence[]; usage: { input_tokens?: number; output_tokens?: number };
   audit: { estimated_input_tokens: number; evidence_tokens: number; history_messages_omitted: number; documents_omitted: number; unknown_citations: string[] };
 };
@@ -49,7 +49,7 @@ export default function StudyLab() {
   const field = "block w-full rounded-xl border bg-background p-3 mt-2";
   return <main className="min-h-screen bg-background px-5 py-10 text-foreground">
     <div className="mx-auto max-w-6xl space-y-8">
-      <nav className="flex justify-between text-sm"><Link href="/">← {t("study.workspace")}</Link></nav>
+      <nav className="flex justify-between text-sm"><Link href="/">← {t("study.workspace")}</Link><Link href="/experiments">{t("experiments.title")} →</Link></nav>
       <header><p className="text-sm uppercase tracking-widest text-muted-foreground">OpenTutor · {t("study.experimental")}</p><h1 className="mt-3 text-4xl font-semibold">{t("study.title")}</h1><p className="mt-3 max-w-2xl text-muted-foreground">{t("study.subtitle")}</p></header>
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         <aside className="space-y-5 rounded-2xl border p-5 self-start">
@@ -75,7 +75,7 @@ export default function StudyLab() {
             <dl className="grid grid-cols-2 gap-3 text-sm"><div><dt>{t("study.estimated")}</dt><dd className="text-2xl">{result.audit.estimated_input_tokens}</dd></div><div><dt>{t("study.provider")}</dt><dd className="text-2xl">{result.usage.input_tokens ?? "—"} / {result.usage.output_tokens ?? "—"}</dd></div></dl>
             <p className="text-xs text-muted-foreground">{t("study.estimateNote")} {t("study.omitted")}: {result.audit.history_messages_omitted} / {result.audit.documents_omitted}</p>
             {!!result.audit.unknown_citations.length && <p role="alert">{t("study.badCitations")}: {result.audit.unknown_citations.join(", ")}</p>}
-            {result.review && <div className="space-y-3 border-t pt-4"><h3 className="font-medium">{t("study.reviewer")}: {t(`study.${result.review.status}`)}</h3><p className="text-xs text-muted-foreground">{t("study.reviewLimit")}</p>{result.review.reason && <p>{t(`study.reason.${result.review.reason}`)}</p>}{result.review.claims.map((claim, i) => <div key={i} className="rounded-xl bg-muted p-3 text-sm"><strong>{t(`study.${claim.verdict}`)}</strong><p className="mt-2">{claim.claim}</p><blockquote className="my-2 border-l-2 pl-3">[{claim.citation}] {claim.quote}</blockquote><p>{claim.reason}</p></div>)}</div>}
+            {result.review && <div className="space-y-3 border-t pt-4"><h3 className="font-medium">{t("study.reviewer")}: {t(`study.${result.review.status}`)}</h3><p className="text-xs text-muted-foreground">{t("study.reviewLimit")}</p>{result.review.usage && <p className="text-sm">{t("study.reviewerTokens")}: {result.review.usage.input_tokens ?? "—"} / {result.review.usage.output_tokens ?? "—"} · {result.review.model}</p>}{result.review.reason && <p>{t(`study.reason.${result.review.reason}`)}</p>}{result.review.claims.map((claim, i) => <div key={i} className="rounded-xl bg-muted p-3 text-sm"><strong>{t(`study.${claim.verdict}`)}</strong><p className="mt-2">{claim.claim}</p><blockquote className="my-2 border-l-2 pl-3">[{claim.citation}] {claim.quote}</blockquote><p>{claim.reason}</p></div>)}</div>}
             <h3 className="font-medium">{t("study.sources")}</h3>
             {!result.evidence.length && <p className="text-sm">{t("study.noEvidence")}</p>}
             {result.evidence.map(source => <details key={source.citation} className="rounded-xl bg-muted p-3 text-sm"><summary className="cursor-pointer">[{source.citation}] {source.title} {source.page && `· ${t("study.page")} ${source.page}`}</summary><p className="mt-2 text-xs">{source.source} · {source.quality_flags.join(", ")} {source.truncated && t("study.truncated")}</p><p className="mt-3 whitespace-pre-wrap">{source.content}</p></details>)}

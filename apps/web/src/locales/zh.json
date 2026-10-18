@@ -989,5 +989,6 @@
   "experiments.fpr": "假正率",
   "experiments.posterior": "P(垃圾邮件 | 被标记)",
   "experiments.undefined": "未定义",
-  "experiments.bayesNote": "后验 = 先验 × 真正率 / [先验 × 真正率 + (1 − 先验) × 假正率]。分母为零表示这些假设下不会出现标记。"
+  "experiments.bayesNote": "后验 = 先验 × 真正率 / [先验 × 真正率 + (1 − 先验) × 假正率]。分母为零表示这些假设下不会出现标记。",
+  "study.reviewerTokens": "审核模型输入 / 输出词元"
 }

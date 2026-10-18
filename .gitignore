@@ -51,3 +51,7 @@ sessions/
 # Local database
 *.db
 *.sqlite
+
+# SQLite sidecars from local study sessions
+*.db-shm
+*.db-wal

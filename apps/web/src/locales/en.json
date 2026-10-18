@@ -989,5 +989,6 @@
   "experiments.fpr": "False positive rate",
   "experiments.posterior": "P(spam | flagged)",
   "experiments.undefined": "Undefined",
-  "experiments.bayesNote": "Posterior = prior × TPR / [prior × TPR + (1 − prior) × FPR]. A zero denominator means the flag never occurs under these assumptions."
+  "experiments.bayesNote": "Posterior = prior × TPR / [prior × TPR + (1 − prior) × FPR]. A zero denominator means the flag never occurs under these assumptions.",
+  "study.reviewerTokens": "Reviewer input / output tokens"
 }

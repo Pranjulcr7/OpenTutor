@@ -1,3 +1,5 @@
+> **Study Lab prototype:** check out `study/all-features` and follow [the Mac setup guide](docs/study-lab/README.md). Includes bounded study chat, optional latest-answer review, page-aware PDF evidence and interactive exercises.
+
 <div align="center">
 
 <img src="https://img.icons8.com/3d-fluency/94/graduation-cap.png" alt="OpenTutor Logo" width="80" />

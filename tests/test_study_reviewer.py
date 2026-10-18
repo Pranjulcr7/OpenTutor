@@ -2,7 +2,6 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from services.study.reviewer import review_answer, validate_review
 
 EVIDENCE = [{"citation": "S1", "content": "The decoder masks future tokens."}]
@@ -10,13 +9,13 @@ ANSWER = "The decoder masks future tokens."
 
 
 def payload(**updates):
-    claim = dict(
-        claim=ANSWER,
-        verdict="supported",
-        citation="S1",
-        quote=ANSWER,
-        reason="Matches source",
-    )
+    claim = {
+        "claim": ANSWER,
+        "verdict": "supported",
+        "citation": "S1",
+        "quote": ANSWER,
+        "reason": "Matches source",
+    }
     claim.update(updates)
     return json.dumps({"claims": [claim]})
 

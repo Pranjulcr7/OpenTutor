@@ -3,7 +3,6 @@ import uuid
 import pytest
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
-
 from services.ingestion.pdf_evidence import extract_pdf_pages, split_text
 from services.parser.pdf import _markdown_to_tree
 

@@ -40,7 +40,10 @@ def extract_pdf_pages(path: str) -> tuple[str, str]:
             "visual_review_required": len(flags) > 1,
         }
         if not text:
-            text = "[No native text extracted. Inspect the original page; OCR may be needed.]"
+            text = (
+                "[No native text extracted. Inspect the original page; "
+                "OCR may be needed.]"
+            )
         pages.append(f"{PREFIX}{json.dumps(meta)} -->\n{text}")
     return Path(path).stem, "\n\n".join(pages)
 
