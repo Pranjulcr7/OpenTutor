@@ -60,7 +60,9 @@ async def keyword_search(
         scored.append({
             "id": str(node.id),
             "title": node.title,
-            "content": (node.content or "")[:1500],
+            "content": (node.content or "")[:6000],
+            "truncated": len(node.content or "") > 6000,
+            "metadata": node.metadata_ or {},
             "level": node.level,
             "parent_id": str(node.parent_id) if node.parent_id else None,
             "source_file": node.source_file,
