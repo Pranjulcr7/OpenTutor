@@ -19,7 +19,7 @@ from services.auth.dependency import get_current_user
 from services.course_access import get_course_or_404
 from services.llm.router import get_llm_client
 from services.search.strategies import keyword_search
-from services.study.packet import build_packet, unknown_citations
+from services.study.packet import build_packet, unknown_citations, retrieval_query
 
 from services.study.reviewer import review_answer, unchecked
 
@@ -50,7 +50,12 @@ async def study_turn(
     documents = []
     if body.course_id:
         await get_course_or_404(db, body.course_id, user_id=user.id)
-        documents = await keyword_search(db, body.course_id, body.question, limit=12)
+        documents = await keyword_search(
+            db,
+            body.course_id,
+            retrieval_query(body.question, [m.model_dump() for m in body.history]),
+            limit=12,
+        )
     packet = build_packet(
         body.question,
         body.goal,

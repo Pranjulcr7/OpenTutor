@@ -8,7 +8,7 @@ import json
 import logging
 import uuid
 
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.content import CourseContentTree
@@ -30,6 +30,7 @@ async def keyword_search(
         for token in _tokenize_query(facet):
             if token not in terms:
                 terms.append(token)
+    terms = terms[:32]
     if not terms:
         return []
 
@@ -38,13 +39,21 @@ async def keyword_search(
             CourseContentTree.title.ilike(f"%{t}%"),
             CourseContentTree.content.ilike(f"%{t}%"),
         )
-        for t in terms[:6]
+        for t in terms
     ]
 
+    # Rank all matching rows before limiting; otherwise early weak matches can
+    # hide a highly relevant passage in a larger course.
+    hits = sum(case((condition, 1), else_=0) for condition in conditions)
+    level_boost = case(
+        (CourseContentTree.level >= 5, 0.5),
+        else_=1.0 - CourseContentTree.level * 0.1,
+    )
     result = await db.execute(
         select(CourseContentTree)
         .where(CourseContentTree.course_id == course_id, or_(*conditions))
-        .limit(limit * 2)
+        .order_by((hits * level_boost).desc(), CourseContentTree.id)
+        .limit(limit)
     )
     nodes = result.scalars().all()
 
