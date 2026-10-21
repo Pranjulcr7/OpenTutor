@@ -1,4 +1,4 @@
-> **Study Lab prototype:** check out `study/all-features` and follow [the Mac setup guide](docs/study-lab/README.md). Includes bounded study chat, optional latest-answer review, page-aware PDF evidence and interactive exercises.
+> **🧪 Study Lab:** learn a topic, paste a coding problem, or study your own sources. Try the `study/all-features` branch for bounded chat, optional answer review and interactive numerical exercises. [Get started →](docs/study-lab/README.md) · [What is tested?](docs/study-lab/validation.md)
 
 <div align="center">
 

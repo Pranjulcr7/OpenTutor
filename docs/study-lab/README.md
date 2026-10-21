@@ -1,171 +1,227 @@
-# Study Lab prototype
+<div align="center">
 
-An experimental extension of OpenTutor for adult technical study. Use the
-`study/all-features` branch to try the complete prototype. Upstream baseline:
-`a890519f3632efa14cf24449b366b3b9d901eecf`.
+# OpenTutor · Study Lab
 
-## What is implemented
+### Bring a question. Explore an idea. Test your understanding.
 
-| Feature | Implementation | Scope and limitation |
-|---|---|---|
-| Bounded study chat | `/study-lab`: explain, practice, interview and recall modes; goal/level input; course selector | A prompted learning workflow, not a validated adaptive teaching algorithm |
-| Explicit context | Course-authorized keyword retrieval, deduplicated evidence, complete recent messages, token audit | Keyword retrieval can miss relevant passages; no global or cross-course memory is loaded in this route |
-| Independent reviewer | Optional separate OpenAI-compatible model; latest answer + question + goal + last assistant task + evidence | Model-selected claims only; no guarantee of completeness, truth or mathematical correctness |
-| Evidence checking | Supplied citation IDs and exact quoted substrings validated in code | A real quote can still be irrelevant; semantic entailment remains a model judgment |
-| Page-aware PDFs | Native text, page-local chunks, page numbers and sparse-text / visual-object flags | No OCR, equation recognition, figure crops or semantic table reconstruction |
-| Interactive exercises | `/experiments`: softmax/temperature and Bayesian spam classification | Two curated numerical tools; no arbitrary generated-code execution |
-| Model choice | Existing OpenTutor tutor providers; separately configured reviewer | Local Ollama or a cloud tutor plus local reviewer; no API keys are supplied |
-| Local launcher | One command starts API and UI on loopback; optional HTTP smoke test | Intended for local single-user testing |
+**Topics without uploads · Coding practice · Source-backed explanations · Interactive experiments**
 
-Existing OpenTutor upload, notes, quizzes, flashcards and FSRS interfaces remain
-available through the main workspace. The Study Lab does not add a new durable
-learner model or connect its chat attempts to FSRS mastery updates. Sessions live
-in browser memory and clear on reload or reset. Changing course clears the chat.
+[Quick start](#quick-start) · [Try a session](#try-a-session) · [Privacy](#privacy-and-api-keys) · [Validation](validation.md)
 
-Not implemented: video generation, video transcription/keyframe retrieval,
-general image understanding, automatic verification-driven answer rewriting,
-symbolic proof checking, personalized mastery tracking in Study Lab, a full
-evaluation dashboard, or a public multi-user service. These need separate work
-and evaluation. Do not present this prototype as a hallucination-free tutor.
+</div>
 
-## Set up on macOS
+Study Lab is an experimental extension of OpenTutor for technical study. Ask
+about attention, paste a coding problem, or optionally attach course material.
+A PDF is **not required**. The combined test branch is `study/all-features`.
 
-The following starts with local models and requires no paid API calls. Install
-[Ollama for macOS](https://ollama.com/download/mac), open the app, and keep it
-running. Install Git, Node.js (20.9+; tested here on Node 24), and uv. If you use
-Homebrew, `brew install node uv` installs the latter two. Git may prompt for the
-Apple command-line tools on first use.
+| Start with… | Try… |
+|---|---|
+| A topic | “Teach me attention with one small example, then ask a question.” |
+| A coding problem | “Find the first and last target indices in a sorted array. Give one hint.” |
+| An interview goal | Select Interview; enter the role, seniority and topic in Goal. |
+| Your own material | Upload to a course in the workspace, then select it in Study Lab. |
+| A numerical question | Open Experiments; change softmax temperature or a Bayesian base rate. |
+
+## Quick start
+
+Requirements: Git, Python 3.12, Node.js 20.9+, [uv](https://docs.astral.sh/uv/),
+and a running [Ollama](https://ollama.com/) server or a supported cloud provider.
+Run the following from a directory of your choice:
 
 ```bash
-mkdir -p ~/Documents/Projects
-cd ~/Documents/Projects
 git clone --branch study/all-features https://github.com/Pranjulcr7/OpenTutor.git
 cd OpenTutor
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -r apps/api/requirements-core.txt
 npm ci --prefix apps/web
+ollama list
 ```
 
-Download and name the two local models:
-
-```bash
-ollama pull qwen2.5:7b
-ollama pull llama3.2:3b
-ollama create study-tutor -f docs/study-lab/Modelfile.tutor
-ollama create study-reviewer -f docs/study-lab/Modelfile.reviewer
-```
-
-These are baseline model choices for testing, not benchmark winners. The model
-files specify a 16K context window to leave room beyond the application's input
-budget, and cap generated output. Model tokenizers differ from our estimator.
-The two downloaded quantizations are approximately 4.7 GB and 2.0 GB; runtime
-memory is larger because of caches and other processes. Your 24 GB Mac is a
-reasonable starting point, but Mac latency and memory usage have not been
-measured. A smaller reviewer may return invalid JSON or miss technical errors;
-the UI will show a failed check, not silently promote it to a successful one.
-
-Create a new `.env` in this freshly cloned repository with:
+Use an **exact installed model tag** from `ollama list`. Custom aliases such as
+`study-tutor` are optional; the app does not require them. Create a root `.env`
+(or edit existing keys without discarding other settings):
 
 ```dotenv
 LLM_PROVIDER=ollama
-LLM_MODEL=study-tutor
+LLM_MODEL=your-installed-model-tag
+LLM_REQUIRED=true
 OLLAMA_BASE_URL=http://localhost:11434
-STUDY_REVIEWER_MODEL=study-reviewer
-STUDY_REVIEWER_BASE_URL=http://localhost:11434/v1
-STUDY_REVIEWER_API_KEY=
 EMBEDDING_MODE=skip
 AUTH_ENABLED=false
 ```
 
-If `.env` already exists, edit these keys without discarding existing settings.
-This configuration and launcher are for local use. The launcher binds both
-services to `127.0.0.1`, reads the root `.env`, and starts the web-to-API proxy.
+Replace `your-installed-model-tag` before starting. This configuration is for
+local single-user use; keep the services on loopback.
 
 ```bash
 .venv/bin/python scripts/run_study_lab.py
 ```
 
-Open **http://127.0.0.1:3001/study-lab**. Numerical exercises are at
-**http://127.0.0.1:3001/experiments**. Stop both services with Ctrl+C.
+Open **http://127.0.0.1:3001/study-lab**. The launcher starts API and UI, binds
+both to `127.0.0.1`, and uses the root `.env` for startup and Settings updates.
+`LOCAL_ENV_FILE` can select another file. Stop both services with Ctrl+C.
 
-For a cloud tutor, use the provider keys from the root `.env.example` while
-keeping the reviewer settings local. Selected questions and excerpts will then
-be transmitted to that tutor provider. The tutor follows OpenTutor's existing
-provider-selection/fallback behavior; the reviewer never falls back to the
-tutor. Do not use personal study documents until you are comfortable with the
-chosen provider settings.
+<details>
+<summary><strong>Already installed? Update without reinstalling</strong></summary>
 
-## First test session
-
-1. Open the main workspace, create a course, and upload a short text-based PDF.
-   Wait for ingestion to finish. Upload processing may also trigger existing
-   OpenTutor classification/auto-generation calls outside the Study Lab audit.
-2. Open Study Lab and select that course. Set a goal such as “ML interview;
-   explain attention masking and then test me.” Start with a 2,000-token evidence
-   budget and review turned off.
-3. Ask a direct question whose answer you can locate in the PDF. Open the source
-   disclosures; compare the quoted text and physical PDF page numbers.
-4. Turn review on and repeat a comparable question. Inspect claim verdicts,
-   quotes, reviewer input/output usage, and added latency. “Supported” means the
-   reviewer judged support from the shown evidence, not that correctness is proven.
-5. Ask something absent from the document, then try a scanned or diagram-heavy
-   page. Expect missing-evidence / extraction limitations. A reviewer cannot
-   recover information that was never extracted.
-6. Try practice and interview modes. Answer before requesting a hint. Use the
-   softmax and Bayes sliders, predicting the change before moving them.
-
-Record false approvals, missed claims, invalid JSON, useful source coverage,
-latency and total tutor-plus-reviewer usage. Compare review-on against the same
-tutor and evidence policy with review-off. Do not compare only against an
-inefficient baseline that resends whole PDFs every turn.
-
-## Branches
-
-| Branch | Purpose |
-|---|---|
-| `feat/bounded-study-lab` | Chat route/UI, retrieval packet and token audit |
-| `feat/latest-answer-review` | Reviewer configuration, validation and UI; stacked on bounded study lab |
-| `feat/page-aware-pdf` | Native page-aware extraction and ingestion integration |
-| `feat/interactive-study-experiments` | Numerical exercises |
-| `fix/upstream-typecheck` | Missing summary-block mappings and typed test fixture defaults |
-| `fix/ingestion-test-mocks` | Update old tests to mock the current extraction function |
-| `study/all-features` | All features, fixes, integration tests, launcher and documentation |
-
-The combined branch contains final integration polish and tests in addition to
-the feature merges. Before upstream PRs, port the relevant integration changes
-back into each focused branch and discuss the larger additions as requested by
-upstream CONTRIBUTING.md. No upstream PR has been opened.
-
-## Validation and troubleshooting
-
-Validation in the development environment: 30 selected backend tests passed;
-the existing frontend suite with the new numerical tests passed (219 tests),
-and the two newly added Study Lab UI tests passed separately. TypeScript passed.
-The launcher returned HTTP 200 for API OpenAPI, Study Lab, experiments and proxied
-health endpoints. See `validation.md` for the final build result.
-
-Model calls in these automated tests are mocked. No live generative tutor or
-reviewer ran in this environment. Consequently, correctness improvement,
-consumer-scale performance, Mac performance and actual API savings remain
-unvalidated.
+Stop the running launcher. From the repository root:
 
 ```bash
-uv pip install --python .venv/bin/python pytest pytest-asyncio ruff
-.venv/bin/python -m pytest tests/test_study_packet.py tests/test_study_reviewer.py tests/test_study_routes.py tests/test_pdf_evidence.py tests/test_ingestion_regressions.py tests/test_security_regressions_authz.py -q -o addopts=''
-npm run test:run --prefix apps/web
-npm run build --prefix apps/web
-.venv/bin/python scripts/run_study_lab.py --smoke-test
+git status --short
+git fetch origin
+git switch study/all-features
+git pull --ff-only origin study/all-features
+.venv/bin/python scripts/run_study_lab.py
 ```
 
-Run build and smoke-test sequentially. If a port is occupied, stop the previous
-server; alternatively pass `--api-port 8001 --web-port 3002` and update CORS
-origins for the new web port. If the tutor is unavailable, check `ollama list`
-and confirm the Ollama app is running. If review times out, warm the model once
-with `ollama run study-reviewer`, reduce the evidence budget, or select another
-reviewer. Invalid reviewer output is visible as “not checked.” Restart the
-launcher after changing `.env`.
+Keep your `.env` and model choice. If Git reports local edits or divergence,
+resolve them before pulling; do not reset or overwrite your files. Rerun the
+package installation commands only if dependency files changed.
 
-Source references for local model setup:
-[Ollama quickstart](https://docs.ollama.com/quickstart),
-[Qwen2.5 7B](https://ollama.com/library/qwen2.5:7b),
-[Llama 3.2 3B](https://ollama.com/library/llama3.2:3b).
+</details>
+
+## Try a session
+
+1. Leave **Source course** at **No sources · general knowledge**, keep review off,
+   and choose Explain. Ask a topic question or paste a coding problem.
+2. Read the example, then answer the tutor's question. Use Practice to request
+   one question at a time; use Interview with a role and seniority in Goal.
+3. Open **Explore the numbers** for softmax and Bayes exercises. Predict an
+   outcome, move a control, and explain the result. These are deterministic
+   calculations; they do not run model-generated code.
+4. For source-backed study, upload material through the main workspace, wait
+   for ingestion, then select that course. Check source excerpts and page
+   numbers against the original document.
+5. Optionally enable the independent reviewer. Inspect its individual claims
+   and quoted evidence; “supported” is a model judgment, not proof of truth.
+
+Changing course or reloading clears the Study Lab conversation. Chat history
+is currently browser-session state, not a durable learner record.
+
+<details>
+<summary><strong>Course workspace preview (existing OpenTutor demo)</strong></summary>
+
+![OpenTutor course workspace with chapters, notes and quiz blocks](../assets/demo-workspace-full.png)
+
+Use the existing course workspace for uploaded materials, notes and quizzes.
+Study Lab is a separate page at `/study-lab`; its conversation does not update
+this workspace's mastery tracker. This screenshot is the upstream demo, not a
+capture of the new Study Lab flow. Fresh Study Lab screenshots are pending the
+updated local browser test.
+
+</details>
+
+### What happens to context?
+
+The tutor receives the question, goal, bounded recent conversation and selected
+course excerpts. This route loads no global user memory. Evidence is deduplicated
+and budgeted; token estimates and provider-reported counts are shown separately.
+The estimator is `cl100k_base`, which can differ from a local model's tokenizer.
+
+Follow-up retrieval combines the current question with bounded keywords from
+the latest user turn. It is lexical context expansion, not semantic query
+rewriting. SQL ranks matching passages before applying the result limit.
+Assignments and exam documents are searchable as well as retaining their
+specialized records. Older uploads affected by missing indexing need re-ingestion.
+
+### Optional reviewer
+
+```dotenv
+STUDY_REVIEWER_MODEL=your-installed-reviewer-tag
+STUDY_REVIEWER_BASE_URL=http://localhost:11434/v1
+STUDY_REVIEWER_API_KEY=
+STUDY_REVIEWER_TIMEOUT_SECONDS=30
+```
+
+The separate model receives the latest answer, question, goal, last assistant
+exercise and retrieved evidence. It does not receive the full conversation.
+JSON-object output is requested, then claims, source IDs and exact quoted
+substrings are validated. Empty or malformed reviews remain **not checked**.
+No evidence means there is no source-based check; the reviewer cannot validate
+general knowledge without evidence. It never falls back to the tutor.
+
+A smaller model is not automatically a useful reviewer. The initial tiny-model
+experiment produced no usable reviews; see [the validation record](validation.md).
+Review is off by default and is not a guarantee against hallucination.
+
+## Privacy and API keys
+
+- Settings stores keys in the backend `.env`, with owner-only `0600` file
+  permissions on supported systems. **This is plaintext storage, not encryption.**
+- Saved keys are never returned by the runtime configuration endpoint, even
+  partially. The UI shows a fixed mask. Draft keys are sent to the backend when
+  testing or saving; use loopback locally and authenticated HTTPS for deployments.
+- Configuration values reject control characters, and dotenv values are quoted
+  to prevent injecting additional settings. Validation and tested provider-error
+  responses omit submitted secrets.
+- Global provider settings, connection tests and model discovery are unavailable
+  in multi-user mode. This does not make the prototype ready for public hosting.
+- A cloud provider receives submitted study content. The tutor retains OpenTutor's
+  existing provider selection/fallback behavior: configure only providers you
+  intend to use. Optional ingestion may make separate model calls.
+- Keep `.env`, private documents and raw logs out of Git. Review logs before
+  sharing them. These targeted checks are not a complete security audit.
+
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| No answer | Settings → provider/model; verify the exact tag with `ollama list`. A blank completion now produces an actionable error instead of an empty success. |
+| Model thinks but emits no answer | Some reasoning models exhaust their output limit before answering. If supported by your model/server, try the optional controls below. |
+| Request times out | Tutor default is 120 seconds; configurable up to 300. Reviewer default is 30, up to 120. The UI/proxy allow 435 seconds for both. No automatic retry. |
+| Course list fails | The combined branch fixes the course-list proxy redirect. Restart the launcher after updating. |
+| Review says not checked | Check reviewer availability, JSON support and evidence. Do not interpret this as a passed review. |
+| Answer has unknown citations | The UI flags source IDs absent from the packet. General-knowledge mode tells the model not to cite nonexistent sources; models can still ignore instructions. |
+| PDF lacks equations or diagrams | Current extraction is native text with page references and quality flags, not OCR or semantic figure understanding. |
+
+Optional Ollama controls (defaults preserve the model/server defaults):
+
+```dotenv
+STUDY_TUTOR_TIMEOUT_SECONDS=120
+OLLAMA_REASONING_EFFORT=
+OLLAMA_MAX_TOKENS=0
+```
+
+For a compatible reasoning model, `OLLAMA_REASONING_EFFORT=none` and
+`OLLAMA_MAX_TOKENS=4096` may help. Support varies; these are not universal model
+settings. Restart after editing `.env`. A nonempty answer stopped at the output
+limit is shown with a truncation warning.
+
+### Verify delivery with your actual model
+
+With the app already running, in another terminal from the repository root:
+
+```bash
+.venv/bin/python scripts/verify_study_lab.py
+```
+
+This makes three real tutor calls through the UI proxy: attention, binary search
+and a follow-up. It prints latency, token counts and citation/truncation flags,
+without printing keys or response bodies. If authentication is enabled, supply
+`OPENTUTOR_TEST_TOKEN` through your environment. A pass proves response delivery,
+not accuracy. `run_study_lab.py --smoke-test` only checks server startup and HTTP
+responses; it does not test a model.
+
+## Contribution scope
+
+| Branch | Scope |
+|---|---|
+| `feat/bounded-study-lab` | Original study route, UI and context budgets |
+| `feat/latest-answer-review` | Original optional independent reviewer |
+| `feat/page-aware-pdf` | Native page-aware PDF extraction |
+| `feat/interactive-study-experiments` | Softmax and Bayes exercises |
+| `fix/study-runtime` | Empty answers, local-model controls, deadlines, UI errors and proxy behavior |
+| `fix/provider-config-security` | Key masking, safe config persistence and error handling; stacked on runtime |
+| `fix/study-source-retrieval` | Searchable classified documents and contextual ranking; stacked on security |
+| `docs/study-lab-guide` | Public setup guide and live delivery check; stacked on retrieval |
+| `study/all-features` | Combined integration branch for testing |
+
+Existing `fix/upstream-typecheck` and `fix/ingestion-test-mocks` branches remain.
+For upstream review, extract general fixes onto current upstream main and open
+small focused PRs after testing. Discuss larger additions according to
+[CONTRIBUTING.md](../../CONTRIBUTING.md). No upstream PR is opened automatically.
+
+**Still missing:** persistent Study Lab sessions, a stateful diagnostic/hint/
+feedback loop, mastery updates, video processing, general image understanding,
+symbolic/code correctness checks and measured learning gains. The current
+learning modes are prompts, not a validated adaptive teaching algorithm.
