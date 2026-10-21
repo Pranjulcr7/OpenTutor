@@ -23,6 +23,14 @@ def _build_openai_user_content(text: str, images: list[dict] | None = None) -> s
     return content
 
 
+class EmptyLLMResponse(RuntimeError):
+    """Provider completed a text request without a visible answer."""
+
+    def __init__(self, finish_reason: str | None = None):
+        self.finish_reason = finish_reason
+        super().__init__("The model returned no answer text.")
+
+
 class OpenAIClient(LLMClient):
     """OpenAI-compatible LLM client."""
 
@@ -37,11 +45,12 @@ class OpenAIClient(LLMClient):
 
         self.provider_name = name
         self._supports_stream_options = name not in self._NO_STREAM_OPTIONS
-        kwargs = {"api_key": api_key}
+        kwargs = {"api_key": api_key, "max_retries": 0}
         if base_url:
             kwargs["base_url"] = base_url
         # Timeout: 10s connect, 120s read (streaming), 30s write, 10s pool
-        kwargs["timeout"] = httpx.Timeout(connect=10, read=120, write=30, pool=10)
+        from config import settings
+        kwargs["timeout"] = httpx.Timeout(connect=10, read=max(120, settings.study_tutor_timeout_seconds), write=30, pool=10)
         self.client = AsyncOpenAI(**kwargs)
         self.model = model
 
@@ -114,10 +123,20 @@ class OpenAIClient(LLMClient):
             self.mark_unhealthy(str(e))
             raise
 
-    async def chat(self, system_prompt: str, user_message: str, images: list[dict] | None = None) -> tuple[str, dict]:
+    async def chat(self, system_prompt: str, user_message: str, images: list[dict] | None = None, *, response_format: dict | None = None) -> tuple[str, dict]:
         try:
             user_content = _build_openai_user_content(user_message, images)
+            options: dict[str, Any] = {}
+            if response_format is not None:
+                options["response_format"] = response_format
+            if self.provider_name == "ollama":
+                from config import settings
+                if settings.ollama_reasoning_effort:
+                    options["reasoning_effort"] = settings.ollama_reasoning_effort
+                if settings.ollama_max_tokens:
+                    options["max_tokens"] = settings.ollama_max_tokens
             response = await self.client.chat.completions.create(
+                **options,
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -130,7 +149,12 @@ class OpenAIClient(LLMClient):
                 "output_tokens": response.usage.completion_tokens if response.usage else 0,
             }
             self._last_usage = usage
-            return response.choices[0].message.content or "", usage
+            choice = response.choices[0] if response.choices else None
+            answer = choice.message.content if choice else None
+            if not answer or not answer.strip():
+                raise EmptyLLMResponse(choice.finish_reason if choice else None)
+            usage.update(provider=self.provider_name, model=self.model, finish_reason=choice.finish_reason)
+            return answer, usage
         except (openai.APIConnectionError, openai.APITimeoutError, openai.RateLimitError, openai.APIError) as e:
             self.mark_unhealthy(str(e))
             raise

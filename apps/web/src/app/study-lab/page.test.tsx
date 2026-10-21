@@ -30,3 +30,12 @@ describe("Study Lab", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
+
+it("keeps a question when a provider returns empty answer text", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => ({ok: true,json: async () => ({answer: "  "})})));
+  render(<StudyLab />);
+  fireEvent.change(screen.getByLabelText("Your question or answer"),{target:{value:"Teach me attention"}});
+  fireEvent.click(screen.getByRole("button",{name:"Send"}));
+  expect(await screen.findByRole("alert")).toHaveTextContent("no answer text");
+  expect(screen.getByLabelText("Your question or answer")).toHaveValue("Teach me attention");
+});

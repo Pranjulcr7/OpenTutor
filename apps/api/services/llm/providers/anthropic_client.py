@@ -38,6 +38,7 @@ class AnthropicClient(LLMClient):
         # Timeout: 10s connect, 120s read (streaming), 30s write, 10s pool
         self.client = AsyncAnthropic(
             api_key=api_key,
+            max_retries=0,
             timeout=httpx.Timeout(connect=10, read=120, write=30, pool=10),
         )
         self.model = model

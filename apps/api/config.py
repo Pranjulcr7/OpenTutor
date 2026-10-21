@@ -3,7 +3,8 @@
 import os
 from pathlib import Path
 
-from pydantic import model_validator
+from typing import Literal
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +16,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # LLM — primary provider selection
+    study_tutor_timeout_seconds: int = Field(default=120, ge=10, le=300)
+    study_reviewer_timeout_seconds: int = Field(default=30, ge=5, le=120)
     study_reviewer_model: str = ""
     study_reviewer_base_url: str = "http://localhost:11434/v1"
     study_reviewer_api_key: str = ""
@@ -31,6 +34,8 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
 
     # Local inference backends
+    ollama_reasoning_effort: Literal["", "none", "low", "medium", "high"] = ""
+    ollama_max_tokens: int = Field(default=0, ge=0, le=32768)
     ollama_base_url: str = "http://localhost:11434"
     vllm_base_url: str = "http://localhost:8000/v1"
     lmstudio_base_url: str = "http://localhost:1234/v1"

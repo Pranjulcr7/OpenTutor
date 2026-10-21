@@ -106,6 +106,11 @@ def build_packet(
         "mastered something without assessment. Use Markdown, LaTeX and "
         "concise examples. " + MODES[mode]
     )
+    if not evidence:
+        system += (
+            " No sources are attached. Teach using general knowledge; do not require "
+            "an upload and do not add source citations such as [S1]."
+        )
     user = dumps(
         {
             "question": question,

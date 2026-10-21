@@ -940,10 +940,10 @@
   "study.memory": "Only this session and selected course are used. Reloading clears chat; no personal memory is loaded.",
   "study.reset": "Reset session",
   "study.start": "What would you like to understand?",
-  "study.startHint": "Select a course for grounded answers, or ask a general question. Try explaining your current understanding first.",
+  "study.startHint": "Ask about any topic or paste a problem. No upload is required. Select a course only when you want to use its documents.",
   "study.user": "You",
   "study.assistant": "Tutor",
-  "study.thinking": "Preparing your next step…",
+  "study.thinking": "Waiting for the model (and optional review). Local models may need time to load.",
   "study.question": "Your question or answer",
   "study.send": "Send",
   "study.error": "Request failed.",
@@ -990,5 +990,12 @@
   "experiments.posterior": "P(spam | flagged)",
   "experiments.undefined": "Undefined",
   "experiments.bayesNote": "Posterior = prior × TPR / [prior × TPR + (1 − prior) × FPR]. A zero denominator means the flag never occurs under these assumptions.",
-  "study.reviewerTokens": "Reviewer input / output tokens"
+  "study.reviewerTokens": "Reviewer input / output tokens",
+  "study.emptyAnswer": "The model returned no answer text. Check the model and output budget in Settings; your question has been kept.",
+  "study.modelSettings": "Model settings & connection test",
+  "study.example.attention": "Teach me how attention works in a Transformer. Start with an intuitive example, then check my understanding.",
+  "study.example.dsa": "Given a sorted integer array and a target, find the first and last target index in O(log n). Help me reason before showing code.",
+  "study.exampleLabel.attention": "Learn attention",
+  "study.exampleLabel.dsa": "Practice a DSA problem",
+  "study.truncatedAnswer": "The model reached its output limit. This answer may be incomplete."
 }

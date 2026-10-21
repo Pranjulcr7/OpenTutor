@@ -24,6 +24,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Allow the bounded tutor (300s) plus reviewer (120s) and transport headroom.
+  experimental: { proxyTimeout: 435000 },
   outputFileTracingRoot: path.join(__dirname, "..", ".."),
   turbopack: {
     root: path.join(__dirname, "..", ".."),
@@ -45,6 +47,8 @@ const nextConfig: NextConfig = {
       // beforeFiles ensures the API proxy runs before Next.js file matching
       // and trailing slash normalization, preventing 308 redirect races.
       beforeFiles: [
+        { source: "/api/courses", destination: `${API_URL}/courses/` },
+        { source: "/api/courses/", destination: `${API_URL}/courses/` },
         {
           // FastAPI serves chat SSE on `/api/chat/` and responds with an
           // absolute 307 redirect if the trailing slash is lost. Handle chat

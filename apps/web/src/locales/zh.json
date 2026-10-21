@@ -940,10 +940,10 @@
   "study.memory": "仅使用此会话和所选课程。刷新将清空聊天；不加载个人记忆。",
   "study.reset": "重置会话",
   "study.start": "你想理解什么？",
-  "study.startHint": "选择课程以获得有据可查的回答，或提出一般问题。可以先解释你目前的理解。",
+  "study.startHint": "询问任意主题或粘贴题目，无需上传文件。仅在需要课程资料时选择课程。",
   "study.user": "你",
   "study.assistant": "导师",
-  "study.thinking": "正在准备下一步…",
+  "study.thinking": "正在等待模型与可选审查。本地模型加载可能需要时间。",
   "study.question": "你的问题或回答",
   "study.send": "发送",
   "study.error": "请求失败。",
@@ -990,5 +990,12 @@
   "experiments.posterior": "P(垃圾邮件 | 被标记)",
   "experiments.undefined": "未定义",
   "experiments.bayesNote": "后验 = 先验 × 真正率 / [先验 × 真正率 + (1 − 先验) × 假正率]。分母为零表示这些假设下不会出现标记。",
-  "study.reviewerTokens": "审核模型输入 / 输出词元"
+  "study.reviewerTokens": "审核模型输入 / 输出词元",
+  "study.emptyAnswer": "模型未返回可见答案。请检查模型与输出上限；问题已保留。",
+  "study.modelSettings": "模型设置与连接测试",
+  "study.example.attention": "请用直观例子解释 Transformer 的注意力机制，再检查我的理解。",
+  "study.example.dsa": "给定有序整数数组和目标值，在 O(log n) 时间内找出第一个和最后一个目标下标。先引导思考，再展示代码。",
+  "study.exampleLabel.attention": "学习注意力机制",
+  "study.exampleLabel.dsa": "练习算法题",
+  "study.truncatedAnswer": "模型已达到输出上限，答案可能不完整。"
 }

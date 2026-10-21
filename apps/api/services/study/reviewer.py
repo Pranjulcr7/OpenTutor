@@ -23,7 +23,7 @@ class Claim(BaseModel):
 
 class Review(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    claims: list[Claim] = Field(max_length=20)
+    claims: list[Claim] = Field(min_length=1, max_length=20)
 
 
 SYSTEM = """Review factual claims in the latest tutor answer against supplied evidence.
@@ -101,15 +101,18 @@ async def review_answer(
         return unchecked(
             "budget_exceeded"
         )  # Never silently review only a fragment of the answer.
-    client = OpenAIClient(
-        api_key=settings.study_reviewer_api_key or "local",
-        model=settings.study_reviewer_model,
-        base_url=settings.study_reviewer_base_url,
-        name="custom",
-    )
-    client.client.max_retries = 0
+    client = None
     try:
-        raw, usage = await asyncio.wait_for(client.chat(SYSTEM, packet), timeout=30)
+        client = OpenAIClient(
+            api_key=settings.study_reviewer_api_key or "local",
+            model=settings.study_reviewer_model,
+            base_url=settings.study_reviewer_base_url,
+            name="custom",
+        )
+        raw, usage = await asyncio.wait_for(
+            client.chat(SYSTEM, packet, response_format={"type": "json_object"}),
+            timeout=settings.study_reviewer_timeout_seconds,
+        )
         return {
             **validate_review(raw, answer, evidence),
             "usage": usage,
@@ -121,9 +124,11 @@ async def review_answer(
         ConnectionError,
         OSError,
         RuntimeError,
+        ValueError,
         openai.APIError,
         httpx.HTTPError,
     ):
         return unchecked("unavailable")
     finally:
-        await client.client.close()
+        if client is not None:
+            await client.client.close()

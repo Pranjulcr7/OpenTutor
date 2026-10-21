@@ -65,6 +65,7 @@ async def test_budget_does_not_silently_truncate_answer():
         patch("services.study.reviewer.OpenAIClient") as client,
     ):
         settings.study_reviewer_model = "test"
+        settings.study_reviewer_timeout_seconds = 30
         result = await review_answer("q", "", "", "answer " * 10000, EVIDENCE)
         assert result["reason"] == "budget_exceeded"
         client.assert_not_called()
@@ -77,6 +78,7 @@ async def test_unavailable_reviewer_and_cleanup():
         patch("services.study.reviewer.OpenAIClient") as factory,
     ):
         settings.study_reviewer_model = "test"
+        settings.study_reviewer_timeout_seconds = 30
         client = factory.return_value
         client.chat = AsyncMock(side_effect=TimeoutError)
         client.client.close = AsyncMock()

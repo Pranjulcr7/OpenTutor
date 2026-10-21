@@ -4,6 +4,11 @@ import asyncio
 import uuid
 from typing import Literal
 
+import httpx
+import openai
+from config import settings
+from services.llm.providers.openai_client import EmptyLLMResponse
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,13 +64,48 @@ async def study_turn(
             422, "Input exceeds study budget; shorten the question or goal."
         )
     try:
+        client = get_llm_client()
+        if client.provider_name == "mock":
+            raise RuntimeError("A real provider is required for Study Lab")
         answer, usage = await asyncio.wait_for(
-            get_llm_client().chat(packet["system"], packet["user"]), 120
+            client.chat(packet["system"], packet["user"]),
+            settings.study_tutor_timeout_seconds,
         )
-    except TimeoutError as exc:
+    except (TimeoutError, openai.APITimeoutError) as exc:
         raise HTTPException(
             504, "Tutor timed out; no automatic retry was made."
         ) from exc
+    except EmptyLLMResponse as exc:
+        raise HTTPException(
+            502,
+            "Model returned no answer text. A thinking model may have exhausted its output budget. For Ollama, increase OLLAMA_MAX_TOKENS or set OLLAMA_REASONING_EFFORT=none if supported, then restart. No automatic retry was made.",
+        ) from exc
+    except openai.NotFoundError as exc:
+        raise HTTPException(
+            503,
+            "Model or endpoint not found. Check the exact model tag against ollama list and verify the provider URL.",
+        ) from exc
+    except (openai.AuthenticationError, openai.PermissionDeniedError) as exc:
+        raise HTTPException(
+            503, "Provider rejected authentication. Check the key in Settings."
+        ) from exc
+    except (
+        openai.APIError,
+        httpx.HTTPError,
+        ConnectionError,
+        OSError,
+        RuntimeError,
+    ) as exc:
+        raise HTTPException(
+            503,
+            "Tutor unavailable. Check the provider, model and connection in Settings. No automatic retry was made.",
+        ) from exc
+    if not answer or not answer.strip():
+        raise HTTPException(
+            502,
+            "Model returned no answer text. Check the model and output budget; no automatic retry was made.",
+        )
+    packet["audit"]["output_truncated"] = usage.get("finish_reason") == "length"
     packet["audit"]["unknown_citations"] = unknown_citations(answer, packet["evidence"])
     review = unchecked("disabled")
     if body.review:

@@ -31,7 +31,9 @@ def main() -> int:
                 parser.error(
                     f"Port {port} is occupied; stop the old server or choose another port."
                 )
-    load_dotenv(ROOT / ".env")
+    env_file = Path(os.environ.get("LOCAL_ENV_FILE", ROOT / ".env")).expanduser().resolve()
+    load_dotenv(env_file)
+    os.environ["LOCAL_ENV_FILE"] = str(env_file)
     env = {**os.environ, "NEXT_PUBLIC_API_URL": f"http://127.0.0.1:{args.api_port}/api"}
     children = []
     try:
