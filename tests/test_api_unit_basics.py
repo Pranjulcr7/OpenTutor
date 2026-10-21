@@ -180,21 +180,22 @@ def test_update_llm_runtime_config_persists_and_masks(monkeypatch, tmp_path):
     assert config["llm_required"] is True
     openai_status = next(item for item in config["providers"] if item["provider"] == "openai")
     assert openai_status["has_key"] is True
-    assert openai_status["masked_key"] == "sk-t...5678"
-    assert "OPENAI_API_KEY=sk-test-12345678" in env_path.read_text()
+    assert openai_status["masked_key"] == "********"
+    assert "OPENAI_API_KEY='sk-test-12345678'" in env_path.read_text()
     assert llm_router._registry is None
 
 
-def test_get_llm_runtime_config_reads_existing_env(monkeypatch, tmp_path):
+def test_get_llm_runtime_config_reports_active_settings(monkeypatch, tmp_path):
     env_path = tmp_path / ".env"
-    env_path.write_text("ANTHROPIC_API_KEY=anthropic-secret-1234\n", encoding="utf-8")
+    env_path.write_text("ANTHROPIC_API_KEY=stale-value\n", encoding="utf-8")
+    monkeypatch.setattr(llm_router.settings, "anthropic_api_key", "active-secret-value")
     monkeypatch.setattr("services.llm.local_config._env_path", lambda: env_path)
 
     config = get_llm_runtime_config()
 
     anthropic_status = next(item for item in config["providers"] if item["provider"] == "anthropic")
     assert anthropic_status["has_key"] is True
-    assert anthropic_status["masked_key"] == "anth...1234"
+    assert anthropic_status["masked_key"] == "********"
 
 
 def test_update_llm_runtime_config_can_delete_saved_key(monkeypatch, tmp_path):

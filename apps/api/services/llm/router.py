@@ -185,7 +185,7 @@ class ProviderRegistry:
                 self._probe_cache[name] = {
                     "healthy": False,
                     "status": "error",
-                    "error": str(result),
+                    "error": "Provider probe failed",
                     "latency_ms": 0,
                     "checked_at": time.time(),
                 }
@@ -198,17 +198,17 @@ class ProviderRegistry:
             return {
                 "healthy": healthy,
                 "status": "ok" if healthy else "unhealthy",
-                "error": None if healthy else getattr(client, '_last_error', None),
+                "error": None if healthy else "Provider unhealthy",
                 "latency_ms": round(elapsed, 1),
                 "checked_at": time.time(),
             }
         except Exception as e:  # Catch-all: wraps arbitrary probe failures into health status dict
-            logger.debug("Provider %s probe failed: %s", name, e)
+            logger.debug("Provider %s probe failed (%s)", name, type(e).__name__)
             elapsed = (time.time() - start) * 1000
             return {
                 "healthy": False,
                 "status": "error",
-                "error": str(e),
+                "error": "Provider probe failed",
                 "latency_ms": round(elapsed, 1),
                 "checked_at": time.time(),
             }

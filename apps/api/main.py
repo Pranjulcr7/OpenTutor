@@ -89,12 +89,12 @@ async def database_error_handler(_: Request, exc: SQLAlchemyError):
 
 async def generic_error_handler(_: Request, exc: Exception):
     if is_llm_unavailable_error(exc):
-        llm_error = LLMUnavailableError(str(exc))
+        llm_error = LLMUnavailableError("LLM service temporarily unavailable")
         return JSONResponse(status_code=llm_error.status, content=llm_error.to_dict())
     # Catch LLM provider connection errors that weren't caught in handlers
     exc_module = getattr(type(exc), "__module__", "")
     if "openai" in exc_module or "anthropic" in exc_module:
-        logger.warning("LLM provider error: %s", exc, exc_info=True)
+        logger.warning("LLM provider error (%s)", type(exc).__name__)
         return JSONResponse(status_code=503, content={"code": "llm_unavailable", "message": "LLM service temporarily unavailable", "status": 503})
     # Catch Playwright errors that weren't caught in handlers
     if "playwright" in exc_module:
@@ -104,7 +104,17 @@ async def generic_error_handler(_: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"code": "internal_error", "message": "An unexpected error occurred", "status": 500})
 
 
+async def safe_validation_error_handler(_: Request, exc):
+    # Pydantic's default input field may echo credentials or submitted documents.
+    return JSONResponse(status_code=422, content={"detail": [
+        {"loc": error["loc"], "type": error["type"], "msg": "Invalid request value"}
+        for error in exc.errors()
+    ]})
+
+
 def _register_exception_handlers(app: FastAPI) -> None:
+    from fastapi.exceptions import RequestValidationError
+    app.add_exception_handler(RequestValidationError, safe_validation_error_handler)
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(LLMConfigurationError, llm_configuration_error_handler)
     app.add_exception_handler(SQLAlchemyError, database_error_handler)

@@ -313,7 +313,7 @@
   "settings.providerHealthy": "健康",
   "settings.providerUnhealthy": "异常",
   "settings.noProvidersConfigured": "当前没有已配置的服务商。",
-  "settings.providerStorageHelp": "在这里粘贴本机使用的服务商 API Key。它们会保存到这台机器的 `apps/api/.env`，保存后后端会重新加载 LLM 注册表。",
+  "settings.providerStorageHelp": "密钥保存在后端环境文件中（Study Lab 启动器使用根目录 .env）。已保存的密钥不会返回浏览器。本地文件未加密。",
   "settings.primaryProvider": "主服务商",
   "settings.model": "模型",
   "settings.requiredOn": "必须使用 LLM：开",

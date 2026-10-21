@@ -3,7 +3,10 @@
 import json
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from config import settings
+import openai
+import httpx
 from libs.exceptions import ExternalServiceError, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,21 +21,45 @@ from schemas.preference import (
     OllamaModelEntry,
 )
 from services.auth.dependency import get_current_user
-from services.llm.local_config import get_llm_runtime_config, get_ollama_models, test_llm_connection
+from services.llm.local_config import (
+    get_llm_runtime_config,
+    get_ollama_models,
+    test_llm_connection,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def require_single_user_config():
+    if settings.deployment_mode != "single_user":
+        raise HTTPException(
+            403, "Global provider configuration is unavailable in multi-user mode."
+        )
+
 
 router = APIRouter()
 
 
-@router.get("/runtime/llm", response_model=LlmRuntimeConfigResponse, summary="Get LLM runtime config", description="Read the current local LLM runtime configuration.")
+@router.get(
+    "/runtime/llm",
+    dependencies=[Depends(require_single_user_config)],
+    response_model=LlmRuntimeConfigResponse,
+    summary="Get LLM runtime config",
+    description="Read the current local LLM runtime configuration.",
+)
 async def get_runtime_llm_config(user: User = Depends(get_current_user)):
     """Read the current local LLM runtime configuration for single-user setups."""
     _ = user
     return get_llm_runtime_config()
 
 
-@router.put("/runtime/llm", response_model=LlmRuntimeConfigResponse, summary="Update LLM runtime config", description="Persist local LLM runtime config and reload the provider registry.")
+@router.put(
+    "/runtime/llm",
+    dependencies=[Depends(require_single_user_config)],
+    response_model=LlmRuntimeConfigResponse,
+    summary="Update LLM runtime config",
+    description="Persist local LLM runtime config and reload the provider registry.",
+)
 async def set_runtime_llm_config(
     body: LlmRuntimeConfigUpdate,
     user: User = Depends(get_current_user),
@@ -40,10 +67,20 @@ async def set_runtime_llm_config(
     """Persist local LLM runtime config and reload provider registry."""
     _ = user
     from services.llm.local_config import update_llm_runtime_config
-    return update_llm_runtime_config(body.model_dump(exclude_none=True))
+
+    try:
+        return update_llm_runtime_config(body.model_dump(exclude_none=True))
+    except ValueError as exc:
+        raise ValidationError(message=str(exc)) from exc
 
 
-@router.post("/runtime/llm/test", response_model=LlmConnectionTestResponse, summary="Test LLM connection", description="Test an LLM provider connection using a draft or saved API key.")
+@router.post(
+    "/runtime/llm/test",
+    dependencies=[Depends(require_single_user_config)],
+    response_model=LlmConnectionTestResponse,
+    summary="Test LLM connection",
+    description="Test an LLM provider connection using a draft or saved API key.",
+)
 async def test_runtime_llm_config(
     body: LlmConnectionTestRequest,
     user: User = Depends(get_current_user),
@@ -54,11 +91,27 @@ async def test_runtime_llm_config(
         return await test_llm_connection(body.provider, body.model, body.api_key)
     except ValueError as exc:
         raise ValidationError(message=str(exc)) from exc
-    except (ConnectionError, OSError, TimeoutError) as exc:
-        raise ExternalServiceError(service="LLM", message=str(exc)) from exc
+    except (
+        ConnectionError,
+        OSError,
+        TimeoutError,
+        RuntimeError,
+        openai.APIError,
+        httpx.HTTPError,
+    ) as exc:
+        raise ExternalServiceError(
+            service="LLM",
+            message="Connection test failed. Check the provider, model and credentials.",
+        ) from exc
 
 
-@router.get("/runtime/ollama/models", response_model=list[OllamaModelEntry], summary="List Ollama models", description="Return models available on a running Ollama instance.")
+@router.get(
+    "/runtime/ollama/models",
+    dependencies=[Depends(require_single_user_config)],
+    response_model=list[OllamaModelEntry],
+    summary="List Ollama models",
+    description="Return models available on a running Ollama instance.",
+)
 async def list_ollama_models(
     base_url: str | None = None,
     user: User = Depends(get_current_user),
@@ -68,9 +121,13 @@ async def list_ollama_models(
     try:
         return await get_ollama_models(base_url)
     except (ConnectionError, OSError, TimeoutError, ValueError) as exc:
-        raise ExternalServiceError(service="Ollama", message=f"Cannot reach Ollama: {exc}") from exc
+        raise ExternalServiceError(
+            service="Ollama", message="Cannot reach Ollama. Check the server and URL."
+        ) from exc
     except Exception as exc:
-        raise ExternalServiceError(service="Ollama", message=f"Ollama request failed: {exc}") from exc
+        raise ExternalServiceError(
+            service="Ollama", message="Ollama request failed."
+        ) from exc
 
 
 # ── NL Preference Parsing ──
@@ -96,14 +153,37 @@ _DIRECT_PARSE_SIGNALS: dict[tuple[str, str], tuple[str, ...]] = {
     ("note_format", "mind_map"): ("mind map", "mind-map"),
     ("note_format", "step_by_step"): ("step by step", "step-by-step"),
     ("note_format", "summary"): ("summary", "summaries"),
-    ("detail_level", "concise"): ("concise", "brief", "short", "shorter", "simplify", "simple"),
+    ("detail_level", "concise"): (
+        "concise",
+        "brief",
+        "short",
+        "shorter",
+        "simplify",
+        "simple",
+    ),
     ("detail_level", "balanced"): ("balanced",),
-    ("detail_level", "detailed"): ("detailed", "detail", "longer", "more detail", "more details"),
+    ("detail_level", "detailed"): (
+        "detailed",
+        "detail",
+        "longer",
+        "more detail",
+        "more details",
+    ),
     ("explanation_style", "formal"): ("formal",),
     ("explanation_style", "conversational"): ("conversational", "casual"),
     ("explanation_style", "socratic"): ("socratic",),
     ("explanation_style", "example_heavy"): ("example", "examples"),
-    ("visual_preference", "diagram_heavy"): ("diagram", "diagrams", "flowchart", "flowcharts", "visual", "chart", "charts", "graph", "graphs"),
+    ("visual_preference", "diagram_heavy"): (
+        "diagram",
+        "diagrams",
+        "flowchart",
+        "flowcharts",
+        "visual",
+        "chart",
+        "charts",
+        "graph",
+        "graphs",
+    ),
     ("visual_preference", "text_heavy"): ("text", "reading", "written"),
     ("visual_preference", "mixed"): ("mixed", "both"),
     ("language", "en"): ("english", "en"),
@@ -116,14 +196,54 @@ _DIRECT_PARSE_SIGNALS: dict[tuple[str, str], tuple[str, ...]] = {
 
 _DIMENSION_CONTEXT_SIGNALS: dict[str, tuple[str, ...]] = {
     "note_format": ("note", "notes", "format", "outline"),
-    "detail_level": ("detail", "short", "shorter", "brief", "simple", "detailed", "longer"),
-    "explanation_style": ("style", "tone", "voice", "explain", "responses", "example", "examples"),
-    "visual_preference": ("visual", "diagram", "diagrams", "flowchart", "chart", "graph", "learner", "text"),
-    "language": ("language", "english", "chinese", "japanese", "korean", "spanish", "french", "中文", "日本語", "한국어", "español", "français"),
+    "detail_level": (
+        "detail",
+        "short",
+        "shorter",
+        "brief",
+        "simple",
+        "detailed",
+        "longer",
+    ),
+    "explanation_style": (
+        "style",
+        "tone",
+        "voice",
+        "explain",
+        "responses",
+        "example",
+        "examples",
+    ),
+    "visual_preference": (
+        "visual",
+        "diagram",
+        "diagrams",
+        "flowchart",
+        "chart",
+        "graph",
+        "learner",
+        "text",
+    ),
+    "language": (
+        "language",
+        "english",
+        "chinese",
+        "japanese",
+        "korean",
+        "spanish",
+        "french",
+        "中文",
+        "日本語",
+        "한국어",
+        "español",
+        "français",
+    ),
 }
 
 
-def _is_direct_parse_confident(text: str, dimension: str | None, value: str | None) -> bool:
+def _is_direct_parse_confident(
+    text: str, dimension: str | None, value: str | None
+) -> bool:
     if not dimension or not value:
         return False
     normalized = text.casefold().strip()
@@ -134,7 +254,12 @@ def _is_direct_parse_confident(text: str, dimension: str | None, value: str | No
     return has_value_signal and has_context_signal
 
 
-@router.post("/parse-nl", response_model=NLPreferenceResult, summary="Parse NL preference", description="Parse a natural language preference request into a structured dimension and value.")
+@router.post(
+    "/parse-nl",
+    response_model=NLPreferenceResult,
+    summary="Parse NL preference",
+    description="Parse a natural language preference request into a structured dimension and value.",
+)
 async def parse_nl_preference(
     body: NLPreferenceRequest,
     user: User = Depends(get_current_user),
@@ -149,6 +274,7 @@ async def parse_nl_preference(
         raw, _usage = await client.extract(_NL_PREFERENCE_PROMPT, body.text)
         # Strip markdown fences if present
         from libs.text_utils import strip_code_fences
+
         raw = strip_code_fences(raw)
         parsed = json.loads(raw)
         dim = parsed.get("dimension")

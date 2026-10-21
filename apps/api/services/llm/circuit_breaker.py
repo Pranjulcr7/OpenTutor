@@ -63,14 +63,14 @@ class CircuitBreakerMixin:
             self._circuit_open_time = time.time()
             logger.error(
                 f"Circuit OPEN for {self.provider_name} after "
-                f"{self._consecutive_failures} failures: {error}"
+                f"{self._consecutive_failures} failures"
             )
             return
 
         idx = min(self._consecutive_failures - 1, len(COOLDOWN_STEPS) - 1)
         cooldown = COOLDOWN_STEPS[idx]
         self._cooldown_until = time.time() + cooldown
-        logger.warning(f"LLM {self.provider_name} unhealthy: {error}, cooldown {cooldown}s")
+        logger.warning("LLM %s unhealthy; cooldown %ss", self.provider_name, cooldown)
 
     def mark_healthy(self):
         self._healthy = True

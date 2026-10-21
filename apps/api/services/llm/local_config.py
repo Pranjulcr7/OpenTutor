@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from dotenv import dotenv_values, set_key, unset_key
+from dotenv import set_key, unset_key
 
 from config import settings
 from services.llm import router as llm_router
@@ -34,7 +34,7 @@ PROVIDER_KEY_FIELDS = {
     "groq": "groq_api_key",
 }
 
-LOCAL_PROVIDERS = ("ollama", "lmstudio", "textgenwebui")
+LOCAL_PROVIDERS = ("ollama", "vllm", "lmstudio", "textgenwebui")
 
 LOCAL_BASE_URL_ENV: dict[str, str] = {
     "ollama": "OLLAMA_BASE_URL",
@@ -64,9 +64,7 @@ def _env_path() -> Path:
 
 
 def _mask_secret(secret: str) -> str:
-    if len(secret) <= 8:
-        return "*" * len(secret)
-    return f"{secret[:4]}...{secret[-4:]}"
+    return "********" if secret else ""
 
 
 def _normalize_bool(value: Any) -> bool:
@@ -98,11 +96,10 @@ def _get_provider_secret(provider: str) -> str:
 
 
 def get_llm_runtime_config() -> dict[str, Any]:
-    env_values = dotenv_values(_env_path())
     providers = []
     for provider in (*PROVIDER_KEY_FIELDS.keys(), *LOCAL_PROVIDERS):
         field = PROVIDER_KEY_FIELDS.get(provider)
-        raw = str(env_values.get(LLM_ENV_FIELDS[field], "") or getattr(settings, field) or "") if field else ""
+        raw = str(getattr(settings, field) or "") if field else ""
         providers.append(
             {
                 "provider": provider,
@@ -121,8 +118,35 @@ def get_llm_runtime_config() -> dict[str, Any]:
 
 
 def update_llm_runtime_config(payload: dict[str, Any]) -> dict[str, Any]:
+    if settings.deployment_mode != "single_user":
+        raise ValueError("Global provider settings require single-user mode.")
+    from urllib.parse import urlsplit
+
+    provider = str(payload.get("provider", settings.llm_provider)).strip().lower()
+    if provider not in (*PROVIDER_KEY_FIELDS, *LOCAL_PROVIDERS):
+        raise ValueError("Unsupported provider.")
+    values = [payload.get("model", ""), payload.get("base_url", "")]
+    values.extend((payload.get("provider_keys") or {}).values())
+    if any(
+        any(ord(ch) < 32 or ord(ch) == 127 for ch in str(value)) for value in values
+    ):
+        raise ValueError("Configuration values must not contain control characters.")
+    if any(len(str(v)) > 512 for v in (payload.get("provider_keys") or {}).values()):
+        raise ValueError("API key is too long.")
+    if "base_url" in payload:
+        url = urlsplit(str(payload["base_url"]))
+        if (
+            url.scheme not in ("http", "https")
+            or not url.hostname
+            or url.username
+            or url.password
+        ):
+            raise ValueError(
+                "Use an HTTP(S) provider URL without embedded credentials."
+            )
     env_path = _env_path()
-    env_path.touch(exist_ok=True)
+    env_path.touch(mode=0o600, exist_ok=True)
+    env_path.chmod(0o600)
 
     updates: dict[str, Any] = {}
     if "provider" in payload:
@@ -140,7 +164,7 @@ def update_llm_runtime_config(payload: dict[str, Any]) -> dict[str, Any]:
         if env_key and attr_field:
             base_url = str(payload["base_url"]).strip().rstrip("/")
             env_path.touch(exist_ok=True)
-            set_key(env_path, env_key, base_url, quote_mode="never")
+            set_key(env_path, env_key, base_url, quote_mode="always")
             setattr(settings, attr_field, base_url)
             os.environ[env_key] = base_url
 
@@ -154,10 +178,12 @@ def update_llm_runtime_config(payload: dict[str, Any]) -> dict[str, Any]:
     for field, value in updates.items():
         env_name = LLM_ENV_FIELDS[field]
         if value == "":
-            unset_key(env_path, env_name, quote_mode="never")
+            unset_key(env_path, env_name, quote_mode="always")
         else:
-            serialized = "true" if value is True else "false" if value is False else str(value)
-            set_key(env_path, env_name, serialized, quote_mode="never")
+            serialized = (
+                "true" if value is True else "false" if value is False else str(value)
+            )
+            set_key(env_path, env_name, serialized, quote_mode="always")
         _apply_runtime_setting(field, value)
 
     _refresh_llm_registry()
@@ -176,7 +202,17 @@ async def test_llm_connection(
     if provider in PROVIDER_KEY_FIELDS and not secret:
         raise ValueError(f"No API key configured for {provider}")
 
-    selected_model = (model or "").strip() or llm_router._default_model_for_provider(provider, settings.llm_model)
+    defaults = {
+        name: default for name, _, _, default, _ in llm_router._OPENAI_COMPAT_PROVIDERS
+    }
+    defaults.update(anthropic="claude-sonnet-4-20250514", ollama="llama3.2:3b")
+    selected_model = (model or "").strip() or (
+        settings.llm_model
+        if provider == settings.llm_provider
+        else defaults.get(provider, "")
+    )
+    if not selected_model:
+        raise ValueError("Specify the model name for this provider.")
 
     if provider == "anthropic":
         client = llm_router.AnthropicClient(secret, selected_model)
@@ -186,6 +222,10 @@ async def test_llm_connection(
             selected_model,
             base_url=f"{settings.ollama_base_url}/v1",
             name="ollama",
+        )
+    elif provider == "vllm":
+        client = llm_router.OpenAIClient(
+            "none", selected_model, base_url=settings.vllm_base_url, name="vllm"
         )
     elif provider == "lmstudio":
         client = llm_router.OpenAIClient(
@@ -209,15 +249,19 @@ async def test_llm_connection(
             name=provider,
         )
 
-    response, usage = await client.extract(
-        "Return exactly the word OK.",
-        "Connection test. Reply with OK only.",
-    )
+    try:
+        response, usage = await client.extract(
+            "Return exactly the word OK.", "Connection test. Reply with OK only."
+        )
+    finally:
+        await client.client.close()
+    if not response.strip():
+        raise RuntimeError("The provider returned no answer text.")
     return {
         "provider": provider,
         "model": selected_model,
-        "ok": "OK" in response.upper(),
-        "response_preview": response[:80],
+        "ok": True,
+        "response_preview": "OK" if response.strip().upper() == "OK" else "",
         "usage": usage,
     }
 

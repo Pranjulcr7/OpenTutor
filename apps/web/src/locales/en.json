@@ -313,7 +313,7 @@
   "settings.providerHealthy": "healthy",
   "settings.providerUnhealthy": "unhealthy",
   "settings.noProvidersConfigured": "No providers configured.",
-  "settings.providerStorageHelp": "Paste provider API keys here for local use. Keys are stored in `apps/api/.env` on this machine and the backend reloads the LLM registry after saving.",
+  "settings.providerStorageHelp": "Keys are saved in the backend environment file (root .env with the Study Lab launcher). Saved keys are never returned to the browser. The local file is not encrypted.",
   "settings.primaryProvider": "Primary provider",
   "settings.model": "Model",
   "settings.requiredOn": "LLM required: On",
